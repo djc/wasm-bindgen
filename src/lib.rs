@@ -233,6 +233,55 @@ impl JsValue {
         }
     }
 
+    /// Creates a new `JsValue` from the JSON serialization of the object `t`
+    /// provided.
+    ///
+    /// This function will serialize the provided value `t` to a JSON string,
+    /// send the JSON string to JS, parse it into a JS object, and then return
+    /// a handle to the JS object. This is unlikely to be super speedy so it's
+    /// not recommended for large payloads, but it's a nice to have in some
+    /// situations!
+    ///
+    /// Usage of this API requires activating the `serde-serialize` feature of
+    /// the `wasm-bindgen` crate.
+    ///
+    /// # Errors
+    ///
+    /// Returns any error encountered when serializing `T` into JSON.
+    #[cfg(feature = "miniserde")]
+    pub fn from_miniserde<T>(t: &T) -> miniserde::Result<JsValue>
+    where
+        T: miniserde::ser::Serialize + ?Sized,
+    {
+        let s = miniserde::json::to_string(t);
+        unsafe { Ok(JsValue::_new(__wbindgen_json_parse(s.as_ptr(), s.len()))) }
+    }
+
+    /// Invokes `JSON.stringify` on this value and then parses the resulting
+    /// JSON into an arbitrary Rust value.
+    ///
+    /// This function will first call `JSON.stringify` on the `JsValue` itself.
+    /// The resulting string is then passed into Rust which then parses it as
+    /// JSON into the resulting value.
+    ///
+    /// Usage of this API requires activating the `serde-serialize` feature of
+    /// the `wasm-bindgen` crate.
+    ///
+    /// # Errors
+    ///
+    /// Returns any error encountered when parsing the JSON into a `T`.
+    #[cfg(feature = "miniserde")]
+    pub fn into_miniserde<T>(&self) -> miniserde::Result<T>
+    where
+        T: miniserde::de::Deserialize,
+    {
+        unsafe {
+            let ret = __wbindgen_json_serialize(self.idx);
+            let s = String::from_abi(ret);
+            miniserde::json::from_str(&s)
+        }
+    }
+
     /// Returns the `f64` value of this JS value if it's an instance of a
     /// number.
     ///
